@@ -125,15 +125,15 @@ createServer(async socket => {
             conn.send(packet)
         }
     }).catch(console.log)
-}).listen(25565)
+}).listen(25565, "127.0.0.1")
 
 function getPacketIdsForProtocol(v) {
     return {
         joinGame: v < 389 ? v < 345 ? 0x23 : 0x24 : 0x25,
-        chatMessageS: v < 345 ? v < 343 ? 0x2 : 0x1 : 0x2,
+        chatMessageS: v < 464 ? v < 345 ? v < 343 ? 0x2 : 0x1 : 0x2 : 0x3,
         chatMessageC: v < 343 ? 0xf : 0xe,
         playerAbilitiesC: v < 451 ? v < 389 ? v < 345 ? 0x2c : 0x2d : 0x2e : 0x2f,
         playerAbilitiesS: v < 389 ? v < 386 ? v < 343 ? 0x13 : 0x12 : 0x15 : 0x17,
-        entityProperties: v < 451 ? v < 440 ? v < 389 ? 0x51 : 0x52 : 0x53 : 0x54
+        entityProperties: v < 464 ?  v < 451 ? v < 440 ? v < 389 ? 0x51 : 0x52 : 0x53 : 0x54 : 0x53
     }
 }
