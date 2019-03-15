@@ -1,9 +1,10 @@
-# Fly and speed hack proxy for Minecraft 1.12 - 1.14
+# Fly and speed hack proxy for Minecraft 1.12 - 19w11b
 
 ## Usage
 
 ```bash
-node . localhost
+# default domain is *.localhost
+node .
 
 # multiple domains
 node . example.com proxy.localhost
