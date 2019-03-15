@@ -199,7 +199,7 @@ function getPacketIdsForProtocol(v) {
         playerAbilitiesS: v < 465 ? v < 389 ? v < 386 ? v < 343 ? 0x13 : 0x12 : 0x15 : 0x17 : 0x19,
         entityProperties: v < 465 ?  v < 451 ? v < 440 ? v < 389 ? 0x51 : 0x52 : 0x53 : 0x54 : 0x53,
         playerPosLookC: v < 451 ? v < 389 ? v < 345 ? 0x2f : 0x31 : 0x32 : 0x33,
-        playerPosS: v < 389 ? v < 386 ? v < 343 ? 0xc : 0xb : 0xe : 0x10,
-        playerPosLookS: v < 389 ? v < 386 ? v < 343 ? 0xd : 0xc : 0xf : 0x11,
+        playerPosS: v < 465 ? v < 389 ? v < 386 ? v < 343 ? 0xc : 0xb : 0xe : 0x10 : 0x12,
+        playerPosLookS: v < 465 ? v < 389 ? v < 386 ? v < 343 ? 0xd : 0xc : 0xf : 0x11 : 0x13,
     }
 }
