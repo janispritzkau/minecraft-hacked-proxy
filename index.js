@@ -71,11 +71,28 @@ createServer(async socket => {
         }
 
         const ids = getPacketIdsForProtocol(client.protocol)
+        const teleportIds = new Set
         let eid, flyingEnabled = false, flying = false, speed = 1
+        let x = 0, y = 0, z = 0, yaw = 0, pitch = 0
 
         conn.onPacket = packet => {
+            if (client.state != State.Play) return client.send(packet)
             if (packet.id == ids.joinGame) {
                 eid = packet.readInt32()
+            } else if (packet.id == 0x32) {
+                const nx = packet.readDouble(), ny = packet.readDouble(), nz = packet.readDouble()
+                const nyaw = packet.readFloat(), npitch = packet.readFloat()
+                const flags = packet.readUInt8()
+                x     = flags & 0b00001 ? x + nx : nx
+                y     = flags & 0b00010 ? y + ny : ny
+                z     = flags & 0b00100 ? z + nz : nz
+                yaw   = flags & 0b01000 ? yaw + nyaw : nyaw
+                pitch = flags & 0b10000 ? pitch + npitch : npitch
+                // client.send(new PacketWriter(ids.chatMessageC).writeJSON({ text: [x, y, z, yaw, pitch].join() }).writeVarInt(0))
+            } else if (packet.id == ids.playerAbilitiesC) {
+                const flags = packet.readUInt8()
+                if (flags & 4) flyingEnabled = true
+                if (flags & 2) flying = true
             }
             client.send(packet)
             if (packet.id == ids.playerAbilitiesC || packet.id == ids.entityProperties) updateAbilitiesSpeed()
@@ -94,7 +111,7 @@ createServer(async socket => {
             switch (command) {
                 case "help": {
                     sendChat({
-                        text: "Available commands: .speed, .fly\n", extra: [
+                        text: "Available commands: .speed, .fly, .tp, .wall\n", extra: [
                             "More info: ",
                             { text: "mc-hack-proxy", clickEvent: {
                                 action: "open_url", value: "https://gitlab.com/janispritzkau/mc-hack-proxy"
@@ -116,6 +133,32 @@ createServer(async socket => {
                     sendChat({ text: "Speed is set to " + speed, color: "gray" })
                     break
                 }
+                case "wall": {
+                    const ox = x, oy = y, oz = z, f = Math.PI / 180
+                    const dx = -Math.cos(pitch * f) * Math.sin(yaw * f)
+                    const dy = Math.round(-Math.sin(pitch * f))
+                    const dz = Math.cos(pitch * f) * Math.cos(yaw * f)
+                    let d = 0, i = 0, interval = setInterval(() => {
+                        if ((i = i + 1) > 15) return clearInterval(interval)
+                        teleportIds.add(12345)
+                        client.send(new PacketWriter(ids.playerPosLookC)
+                            .writeDouble(ox + dx * d).writeDouble(oy + dy * d).writeDouble(oz + dz * d)
+                            .writeFloat(0).writeFloat(0).writeUInt8(0b11000).writeVarInt(12345))
+                        d += 0.2
+                    }, 20)
+                    break
+                }
+                case "tp": {
+                    const pos = [x, y, z]
+                    const [nx, ny, nz] = args.map((v, i) => {
+                        return v.startsWith("~") ? pos[i] + (parseFloat(v.slice(1)) || 0) : v
+                    })
+                    teleportIds.add(12345)
+                    client.send(new PacketWriter(ids.playerPosLookC)
+                        .writeDouble(nx || x).writeDouble(ny || y).writeDouble(nz || z)
+                        .writeFloat(yaw).writeFloat(pitch).writeUInt8(0).writeVarInt(12345))
+                    break
+                }
                 default: {
                     sendChat({ text: "Unknown command", color: "red" })
                 }
@@ -123,16 +166,24 @@ createServer(async socket => {
         }
 
         client.onPacket = packet => {
+            if (client.state != State.Play) return conn.send(packet)
+
             if (packet.id == ids.chatMessageS) {
                 const text = packet.readString()
                 if (text.startsWith(".")) {
                     const args = text.slice(1).split(" ")
                     return runCommand(args[0], args.slice(1))
                 }
-            }
-            if (packet.id == ids.playerAbilitiesS) {
+            } else if (packet.id == ids.playerAbilitiesS) {
                 flying = packet.readUInt8() == 6
                 return
+            } else if (packet.id == ids.playerPosLookS || packet.id == ids.playerPosS) {
+                x = packet.readDouble(), y = packet.readDouble(), z = packet.readDouble()
+                if (packet.id == ids.playerPosLookS) {
+                    yaw = packet.readFloat(), pitch = packet.readFloat()
+                }
+            } else if (packet.id == ids.teleportConfirm) {
+                if (teleportIds.delete(packet.readVarInt())) return
             }
             conn.send(packet)
         }
@@ -142,10 +193,14 @@ createServer(async socket => {
 function getPacketIdsForProtocol(v) {
     return {
         joinGame: v < 389 ? v < 345 ? 0x23 : 0x24 : 0x25,
+        teleportConfirm: 0x0,
         chatMessageS: v < 465 ? v < 345 ? v < 343 ? 0x2 : 0x1 : 0x2 : 0x3,
         chatMessageC: v < 343 ? 0xf : 0xe,
         playerAbilitiesC: v < 451 ? v < 389 ? v < 345 ? 0x2c : 0x2d : 0x2e : 0x2f,
         playerAbilitiesS: v < 465 ? v < 389 ? v < 386 ? v < 343 ? 0x13 : 0x12 : 0x15 : 0x17 : 0x19,
-        entityProperties: v < 465 ?  v < 451 ? v < 440 ? v < 389 ? 0x51 : 0x52 : 0x53 : 0x54 : 0x53
+        entityProperties: v < 465 ?  v < 451 ? v < 440 ? v < 389 ? 0x51 : 0x52 : 0x53 : 0x54 : 0x53,
+        playerPosLookC: v < 451 ? v < 389 ? v < 345 ? 0x2f : 0x31 : 0x32 : 0x33,
+        playerPosS: v < 389 ? v < 386 ? v < 343 ? 0xc : 0xb : 0xe : 0x10,
+        playerPosLookS: v < 389 ? v < 386 ? v < 343 ? 0xd : 0xc : 0xf : 0x11,
     }
 }

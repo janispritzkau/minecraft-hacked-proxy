@@ -21,4 +21,6 @@ Different ports are currently not supported unless the server has a SRV DNS reco
 ```
 .speed <multiplier>  Set the walking speed
 .fly                 Toggle fly on/off
+.tp <x> <y> <z>      Teleport (relative with ~)
+.wall                Glitch through walls in the head direction
 ```
