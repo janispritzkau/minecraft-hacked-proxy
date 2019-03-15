@@ -13,8 +13,22 @@ for (const account of Object.values(launcherProfiles.authenticationDatabase)) {
     }
 }
 
-const n = process.argv[2] || 1
-console.log(`Last ${n} domain part${n == 1 ? "": "s"} will be removed when converting hostnames`)
+const domains = process.argv.slice(2).map(addr => {
+    return addr.startsWith(".") ? addr : "." + addr
+})
+
+if (domains.length == 0) {
+    console.log("Please specify domains that your server is available from.")
+    process.exit()
+}
+
+console.log("Domains: " + domains.map(h => "*" + h).join(", "))
+
+function extractHost(host) {
+    for (const addr of domains) if (host.endsWith(addr)) {
+        return host.slice(0, -addr.length)
+    }
+}
 
 createServer(async socket => {
     const client = new Connection(socket, { isServer: true, keepAlive: false })
@@ -22,9 +36,8 @@ createServer(async socket => {
 
     const handshake = await client.nextPacket()
     handshake.readVarInt()
-    let host = handshake.readString().split(".").slice(0, -1).join(".")
-    let port = handshake.readUInt16()
-    if (!host) host = "localhost", port = 25566
+    const host = extractHost(handshake.readString().split("\0")[0])
+    if (!host) return client.disconnect()
 
     let profile, username
     if (client.state == State.Login) {
@@ -33,7 +46,7 @@ createServer(async socket => {
     }
     client.pause()
 
-    Connection.connect(host, port, profile && {
+    Connection.connect(host, undefined, profile && {
         accessToken: profile.accessToken,
         profile: profile.id,
         keepAlive: false
@@ -43,7 +56,8 @@ createServer(async socket => {
         conn.onClose = () => client.disconnect()
 
         conn.send(new PacketWriter(0x0).writeVarInt(client.protocol)
-        .writeString(host).writeUInt16(port).writeVarInt(client.state))
+            .writeString(host).writeUInt16(conn.socket.remotePort)
+            .writeVarInt(client.state))
 
         client.resume()
         if (client.state == State.Login) {
