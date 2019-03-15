@@ -149,13 +149,20 @@ createServer(async socket => {
                 }
                 case "tp": {
                     const pos = [x, y, z]
+                    const n = (args.length == 4 && parseInt(args[3])) || 1
                     const [nx, ny, nz] = args.map((v, i) => {
-                        return v.startsWith("~") ? pos[i] + (parseFloat(v.slice(1)) || 0) : v
+                        return v.startsWith("~") ? pos[i] + (parseFloat(v.slice(1)) || 0) / n : v || 0
                     })
+                    const dx = nx - x, dy = ny - y, dz = nz - z
+                    ;(async () => {
+                        for (let i = 1; i <= n; i++) {
                     teleportIds.add(12345)
                     client.send(new PacketWriter(ids.playerPosLookC)
-                        .writeDouble(nx || x).writeDouble(ny || y).writeDouble(nz || z)
+                                .writeDouble(pos[0] + dx * i).writeDouble(pos[1] + dy * i).writeDouble(pos[2] + dz * i)
                         .writeFloat(yaw).writeFloat(pitch).writeUInt8(0).writeVarInt(12345))
+                            await new Promise(res => setTimeout(res, 100))
+                        }
+                    })()
                     break
                 }
                 default: {
@@ -181,6 +188,11 @@ createServer(async socket => {
                 if (packet.id == ids.playerPosLookS) {
                     yaw = packet.readFloat(), pitch = packet.readFloat()
                 }
+                const p = new PacketWriter(packet.id)
+                p.buffer = packet.buffer
+                p.offset = packet.offset
+                p.writeBool(true)
+                return conn.send(p)
             } else if (packet.id == ids.teleportConfirm) {
                 if (teleportIds.delete(packet.readVarInt())) return
             }
