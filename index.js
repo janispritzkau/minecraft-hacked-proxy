@@ -18,8 +18,7 @@ const domains = process.argv.slice(2).map(addr => {
 })
 
 if (domains.length == 0) {
-    console.log("Please specify domains that your server is available from.")
-    process.exit()
+    domains.push(".localhost")
 }
 
 console.log("Domains: " + domains.map(h => "*" + h).join(", "))
