@@ -92,6 +92,18 @@ createServer(async socket => {
 
         function runCommand(command, args) {
             switch (command) {
+                case "help": {
+                    sendChat({
+                        text: "Available commands: .speed, .fly\n", extra: [
+                            "More info: ",
+                            { text: "mc-hack-proxy", clickEvent: {
+                                action: "open_url", value: "https://gitlab.com/janispritzkau/mc-hack-proxy"
+                            }, color: "white" }
+                        ],
+                        color: "gray"
+                    })
+                    break
+                }
                 case "fly": {
                     flyingEnabled = !flyingEnabled
                     updateAbilitiesSpeed()
