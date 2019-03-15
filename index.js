@@ -2,9 +2,8 @@ const { Connection, PacketWriter, State } = require("mcproto")
 const { createServer } = require("net")
 const path = require("path")
 const fs = require("fs")
-const os = require("os")
 
-const profilesFilePath = path.resolve(os.homedir(), ".minecraft/launcher_profiles.json")
+const profilesFilePath = path.join(require("minecraft-folder-path"), "launcher_profiles.json")
 const launcherProfiles = JSON.parse(fs.readFileSync(profilesFilePath, "utf-8"))
 const profiles = new Map
 
@@ -13,6 +12,9 @@ for (const account of Object.values(launcherProfiles.authenticationDatabase)) {
         profiles.set(displayName, { id, accessToken: account.accessToken })
     }
 }
+
+const n = process.argv[2] || 1
+console.log(`Last ${n} domain part${n == 1 ? "": "s"} will be removed when converting hostnames`)
 
 createServer(async socket => {
     const client = new Connection(socket, { isServer: true, keepAlive: false })
