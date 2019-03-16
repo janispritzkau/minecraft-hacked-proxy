@@ -155,7 +155,7 @@ createServer(async socket => {
                 }
                 case "nofall": {
                     noFall = !noFall
-                    sendChat({ text: "No fall damage " + (flyingEnabled ? "enabled" : "disabled"), color: "gray" })
+                    sendChat({ text: "No fall damage " + (noFall ? "enabled" : "disabled"), color: "gray" })
                     break
                 }
                 case "speed": {
