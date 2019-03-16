@@ -17,7 +17,7 @@
   },
   "homepage": "https://gitlab.com/janispritzkau/mc-hack-proxy#readme",
   "dependencies": {
-    "mcproto": "^0.5.1",
+    "mcproto": "^0.5.2",
     "minecraft-folder-path": "^1.1.0"
   },
   "devDependencies": {

@@ -13,15 +13,26 @@ for (const account of Object.values(launcherProfiles.authenticationDatabase)) {
     }
 }
 
-const domains = process.argv.slice(2).map(addr => {
-    return addr.startsWith(".") ? addr : "." + addr
-})
-
-if (domains.length == 0) {
-    domains.push(".localhost")
+let opt = null, opts = {}, args = []
+for (const arg of process.argv.slice(2)) {
+    if (arg.startsWith("--")) opt = arg.slice(2)
+    else if (opt) opts[opt] = arg, opt = null
+    else args.push(arg)
 }
 
+let defaultHost, defaultPort
+if (opts.address) {
+    [defaultHost, defaultPort] = opts.address.split(":")
+    defaultPort = defaultPort && parseInt(defaultPort)
+}
+
+const domains = args.map(addr => addr.startsWith(".") ? addr : "." + addr)
+if (domains.length == 0) domains.push(".localhost")
+
 console.log("Domains: " + domains.map(h => "*" + h).join(", "))
+if (defaultHost) {
+    console.log(`Default address: ${defaultHost}${defaultPort ? `:${defaultPort}` : ""}`)
+}
 
 function extractHost(host) {
     for (const addr of domains) if (host.endsWith(addr)) {
@@ -35,8 +46,12 @@ createServer(async socket => {
 
     const handshake = await client.nextPacket()
     handshake.readVarInt()
-    const host = extractHost(handshake.readString().split("\0")[0])
-    if (!host) return client.disconnect()
+    let host = extractHost(handshake.readString().split("\0")[0]), port
+    if (!host) {
+        if (!defaultHost) return client.disconnect()
+        host = defaultHost
+        port = defaultPort
+    }
 
     let profile, username
     if (client.state == State.Login) {
@@ -45,7 +60,7 @@ createServer(async socket => {
     }
     client.pause()
 
-    Connection.connect(host, undefined, profile && {
+    Connection.connect(host, port, profile && {
         accessToken: profile.accessToken,
         profile: profile.id,
         keepAlive: false
@@ -78,7 +93,7 @@ createServer(async socket => {
             if (client.state != State.Play) return client.send(packet)
             if (packet.id == ids.joinGame) {
                 eid = packet.readInt32()
-            } else if (packet.id == 0x32) {
+            } else if (packet.id == ids.playerPosLookC) {
                 const nx = packet.readDouble(), ny = packet.readDouble(), nz = packet.readDouble()
                 const nyaw = packet.readFloat(), npitch = packet.readFloat()
                 const flags = packet.readUInt8()
@@ -87,7 +102,6 @@ createServer(async socket => {
                 z     = flags & 0b00100 ? z + nz : nz
                 yaw   = flags & 0b01000 ? yaw + nyaw : nyaw
                 pitch = flags & 0b10000 ? pitch + npitch : npitch
-                // client.send(new PacketWriter(ids.chatMessageC).writeJSON({ text: [x, y, z, yaw, pitch].join() }).writeVarInt(0))
             } else if (packet.id == ids.playerAbilitiesC) {
                 const flags = packet.readUInt8()
                 if (flags & 4) flyingEnabled = true
