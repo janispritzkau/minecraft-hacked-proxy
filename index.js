@@ -77,6 +77,10 @@ createServer(async socket => {
         if (client.state == State.Login) {
             conn.send(new PacketWriter(0x0).writeString(username))
             client.send(await conn.nextPacketWithId(0x2))
+        } else {
+            conn.onPacket = packet => client.send(packet)
+            client.onPacket = packet => conn.send(packet)
+            return
         }
 
         function sendChat(text) {
@@ -89,6 +93,7 @@ createServer(async socket => {
         let eid, flyingEnabled = false, flying = false, speed = 1
         let x = 0, y = 0, z = 0, yaw = 0, pitch = 0
         let invulnerable = false, creativeMode = false
+        let noFall = false
 
         conn.onPacket = packet => {
             if (client.state != State.Play) return client.send(packet)
@@ -132,7 +137,7 @@ createServer(async socket => {
             switch (command) {
                 case "help": {
                     sendChat({
-                        text: "Available commands: .speed, .fly, .tp, .wall\n", extra: [
+                        text: "Available commands: .speed, .fly, .tp, .wall, .nofall\n", extra: [
                             "More info: ",
                             { text: "mc-hack-proxy", clickEvent: {
                                 action: "open_url", value: "https://gitlab.com/janispritzkau/mc-hack-proxy"
@@ -146,6 +151,11 @@ createServer(async socket => {
                     flyingEnabled = !flyingEnabled
                     updateAbilitiesSpeed()
                     sendChat({ text: "Flying is " + (flyingEnabled ? "enabled" : "disabled"), color: "gray" })
+                    break
+                }
+                case "nofall": {
+                    noFall = !noFall
+                    sendChat({ text: "No fall damage " + (flyingEnabled ? "enabled" : "disabled"), color: "gray" })
                     break
                 }
                 case "speed": {
@@ -210,16 +220,20 @@ createServer(async socket => {
                 if (packet.id == ids.playerPosLookS) {
                     yaw = packet.readFloat(), pitch = packet.readFloat()
                 }
-                const p = new PacketWriter(packet.id)
-                p.buffer = packet.buffer
-                p.offset = packet.offset
-                p.writeBool(true)
-                return conn.send(p)
+                if (noFall) {
+                    const p = new PacketWriter(packet.id)
+                    p.buffer = packet.buffer
+                    p.offset = packet.offset
+                    p.writeBool(true)
+                    return conn.send(p)
+                }
             } else if (packet.id == ids.teleportConfirm) {
                 if (teleportIds.delete(packet.readVarInt())) return
             }
             conn.send(packet)
         }
+
+        sendChat({ text: "Connected via hacked proxy.\nType .help for a list of commands.", color: "gray" })
     }).catch(console.log)
 }).listen(parseInt(opts.port) || 25565, "127.0.0.1")
 

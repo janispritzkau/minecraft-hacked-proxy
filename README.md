@@ -33,4 +33,5 @@ the domains match e.g. you are connecting directly via IP address.
 .fly                 Toggle fly on/off
 .tp <x> <y> <z>      Teleport (relative with ~)
 .wall                Glitch through walls in the head direction
+.nofall              Enable or disable no fall damage
 ```
