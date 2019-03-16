@@ -11,6 +11,9 @@ node . example.com proxy.localhost
 
 # using default address
 node . --address localhost:25566
+
+# run on different port
+node . --port 25566
 ```
 
 Make sure that all subdomains resolve to your server address.

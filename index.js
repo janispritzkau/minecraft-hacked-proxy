@@ -213,7 +213,7 @@ createServer(async socket => {
             conn.send(packet)
         }
     }).catch(console.log)
-}).listen(25565, "127.0.0.1")
+}).listen(parseInt(opts.port) || 25565, "127.0.0.1")
 
 function getPacketIdsForProtocol(v) {
     return {
