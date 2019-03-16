@@ -88,6 +88,7 @@ createServer(async socket => {
         const teleportIds = new Set
         let eid, flyingEnabled = false, flying = false, speed = 1
         let x = 0, y = 0, z = 0, yaw = 0, pitch = 0
+        let invulnerable = false, creativeMode = false
 
         conn.onPacket = packet => {
             if (client.state != State.Play) return client.send(packet)
@@ -105,7 +106,9 @@ createServer(async socket => {
             } else if (packet.id == ids.playerAbilitiesC) {
                 const flags = packet.readUInt8()
                 if (flags & 4) flyingEnabled = true
-                if (flags & 2) flying = true
+                flying = (flags & 2) > 0
+                invulnerable = (flags & 1) > 0
+                creativeMode = (flags & 8) > 0
             }
             client.send(packet)
             if (packet.id == ids.playerAbilitiesC || packet.id == ids.entityProperties) updateAbilitiesSpeed()
@@ -116,8 +119,13 @@ createServer(async socket => {
                 .writeVarInt(eid).writeInt32(1)
                 .writeString("generic.movementSpeed")
                 .writeDouble(.1 * speed).writeVarInt(0))
+            let flags = 0
+            if (invulnerable) flags += 1
+            if (flying) flags += 2
+            if (flyingEnabled) flags += 4
+            if (creativeMode) flags += 8
             client.send(new PacketWriter(ids.playerAbilitiesC)
-                .writeUInt8(flyingEnabled ? flying ? 6 : 4 : 0).writeFloat(.1 * speed).writeFloat(0))
+                .writeUInt8(flags).writeFloat(.1 * speed).writeFloat(0))
         }
 
         function runCommand(command, args) {
@@ -195,7 +203,7 @@ createServer(async socket => {
                     return runCommand(args[0], args.slice(1))
                 }
             } else if (packet.id == ids.playerAbilitiesS) {
-                flying = packet.readUInt8() == 6
+                flying = (packet.readUInt8() & 2) > 0
                 return
             } else if (packet.id == ids.playerPosLookS || packet.id == ids.playerPosS) {
                 x = packet.readDouble(), y = packet.readDouble(), z = packet.readDouble()
