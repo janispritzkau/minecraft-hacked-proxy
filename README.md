@@ -6,11 +6,11 @@
 # default domain is *.localhost
 node .
 
-# multiple domains
-node . example.com proxy.localhost
-
 # using default address
 node . --address localhost:25566
+
+# multiple domains
+node . example.com proxy.localhost
 
 # run on different port
 node . --port 25566
@@ -38,3 +38,5 @@ the domains match e.g. you are connecting directly via IP address.
 .bright              Enable night vision
 .book                Write contents of book.txt to book in main hand
 ```
+
+Every 14 lines in book.txt will be a page in the book.
