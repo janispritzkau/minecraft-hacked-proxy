@@ -1,5 +1,6 @@
 const { Connection, PacketWriter, State } = require("mcproto")
 const { createServer } = require("net")
+const nbt = require("nbt-ts")
 const path = require("path")
 const fs = require("fs")
 
@@ -224,6 +225,36 @@ createServer(async socket => {
                     })()
                     break
                 }
+                case "book": {
+                    if (ids.editBook == null) return sendChat({
+                        text: "Only supported in 1.13 and higher", color: "red"
+                    })
+                    const lines = fs.readFileSync("book.txt", "utf-8").split("\n")
+
+                    const pages = []
+                    let page = ""
+                    for (const [i, line] of lines.entries()) {
+                        if (i % 14 == 0) {
+                            if (i != 0) pages.push(page)
+                            page = ""
+                        }
+                        page += line + "\n"
+                    }
+                    if (page) pages.push(page.slice(0, -1))
+
+                    const writer = new PacketWriter(ids.editBook)
+                        .writeBool(true)
+                        .writeVarInt(692)
+                        .writeUInt8(1)
+
+                    writer.write(nbt.encode("", { pages }))
+
+                    writer.writeBool(false)
+                    writer.writeVarInt(0)
+
+                    conn.send(writer)
+                    break
+                }
                 default: {
                     sendChat({ text: "Unknown command", color: "red" })
                 }
@@ -268,6 +299,7 @@ function getPacketIdsForProtocol(v) {
     return {
         joinGame: v < 389 ? v < 345 ? 0x23 : 0x24 : 0x25,
         teleportConfirm: 0x0,
+        editBook: v < 389 ? null : 0xb,
         chatMessageS: v < 465 ? 0x2 : 0x3,
         chatMessageC: v < 343 ? 0xf : 0xe,
         playerAbilitiesC: v < 451 ? v < 345 ? 0x2c : 0x2e : 0x2f,

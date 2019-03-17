@@ -36,4 +36,5 @@ the domains match e.g. you are connecting directly via IP address.
 .nofall              Enable or disable no fall damage
 .novelocity          Drop player velocity packets
 .bright              Enable night vision
+.book                Write contents of book.txt to book in main hand
 ```
