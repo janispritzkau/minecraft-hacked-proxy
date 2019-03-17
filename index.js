@@ -40,6 +40,8 @@ function extractHost(host) {
     }
 }
 
+const commands = ["speed", "fly", "tp", "wall", "nofall", "novelocity", "bright"]
+
 createServer(async socket => {
     const client = new Connection(socket, { isServer: true, keepAlive: false })
     client.onError = console.log
@@ -93,7 +95,7 @@ createServer(async socket => {
         let eid, flyingEnabled = false, flying = false, speed = 1
         let x = 0, y = 0, z = 0, yaw = 0, pitch = 0
         let invulnerable = false, creativeMode = false
-        let noFall = false
+        let noFall = false, noVelocity = false, bright = false
 
         conn.onPacket = packet => {
             if (client.state != State.Play) return client.send(packet)
@@ -114,6 +116,9 @@ createServer(async socket => {
                 flying = (flags & 2) > 0
                 invulnerable = (flags & 1) > 0
                 creativeMode = (flags & 8) > 0
+            } else if (packet.id == ids.entityVelocity && noVelocity) {
+                // drop player velocity packets
+                if (packet.readVarInt() == eid) return
             }
             client.send(packet)
             if (packet.id == ids.playerAbilitiesC || packet.id == ids.entityProperties) updateAbilitiesSpeed()
@@ -134,10 +139,16 @@ createServer(async socket => {
         }
 
         function runCommand(command, args) {
+            let match
+            for (const cmd of commands) if (cmd.startsWith(command)) {
+                if (match) { match = null; break }
+                else { match = cmd }
+            }
+            if (match) command = match
             switch (command) {
                 case "help": {
                     sendChat({
-                        text: "Available commands: .speed, .fly, .tp, .wall, .nofall\n", extra: [
+                        text: `Available commands: ${commands.join(", ")}\n`, extra: [
                             "More info: ",
                             { text: "mc-hack-proxy", clickEvent: {
                                 action: "open_url", value: "https://gitlab.com/janispritzkau/mc-hack-proxy"
@@ -156,6 +167,22 @@ createServer(async socket => {
                 case "nofall": {
                     noFall = !noFall
                     sendChat({ text: "No fall damage " + (noFall ? "enabled" : "disabled"), color: "gray" })
+                    break
+                }
+                case "novelocity": {
+                    noVelocity = !noVelocity
+                    sendChat({ text: "No velocity " + (noVelocity ? "enabled" : "disabled"), color: "gray" })
+                    break
+                }
+                case "bright": {
+                    bright = !bright
+                    if (bright) {
+                        client.send(new PacketWriter(ids.entityEffect).writeVarInt(eid)
+                            .writeInt8(16).writeInt8(0).writeVarInt(1000000).writeInt8(2))
+                    } else {
+                        client.send(new PacketWriter(ids.removeEntityEffect)
+                            .writeVarInt(eid).writeInt8(16))
+                    }
                     break
                 }
                 case "speed": {
@@ -241,13 +268,16 @@ function getPacketIdsForProtocol(v) {
     return {
         joinGame: v < 389 ? v < 345 ? 0x23 : 0x24 : 0x25,
         teleportConfirm: 0x0,
-        chatMessageS: v < 465 ? v < 345 ? v < 343 ? 0x2 : 0x1 : 0x2 : 0x3,
+        chatMessageS: v < 465 ? 0x2 : 0x3,
         chatMessageC: v < 343 ? 0xf : 0xe,
-        playerAbilitiesC: v < 451 ? v < 389 ? v < 345 ? 0x2c : 0x2d : 0x2e : 0x2f,
-        playerAbilitiesS: v < 465 ? v < 389 ? v < 386 ? v < 343 ? 0x13 : 0x12 : 0x15 : 0x17 : 0x19,
-        entityProperties: v < 465 ?  v < 451 ? v < 440 ? v < 389 ? 0x51 : 0x52 : 0x53 : 0x54 : 0x53,
-        playerPosLookC: v < 451 ? v < 389 ? v < 345 ? 0x2f : 0x31 : 0x32 : 0x33,
-        playerPosS: v < 465 ? v < 389 ? v < 386 ? v < 343 ? 0xc : 0xb : 0xe : 0x10 : 0x12,
-        playerPosLookS: v < 465 ? v < 389 ? v < 386 ? v < 343 ? 0xd : 0xc : 0xf : 0x11 : 0x13,
+        playerAbilitiesC: v < 451 ? v < 345 ? 0x2c : 0x2e : 0x2f,
+        playerAbilitiesS: v < 465 ? v < 343 ? 0x13 : 0x17 : 0x19,
+        entityProperties: v < 465 ? v < 389 ? 0x51 : 0x52 : 0x53,
+        playerPosLookC: v < 451 ? v < 345 ? 0x2f : 0x32 : 0x33,
+        playerPosS: v < 465 ? v < 343 ? 0xc : 0x10 : 0x12,
+        playerPosLookS: v < 465 ? v < 343 ? 0xd : 0x11 : 0x13,
+        entityVelocity: v < 451 ? v < 345 ? 0x3e : 0x41 : 0x42,
+        entityEffect: v < 451 ? v < 389 ? 0x51 : 0x53 : 0x55,
+        removeEntityEffect: v < 451 ? v < 389 ? 0x34 : 0x36 : 0x37
     }
 }

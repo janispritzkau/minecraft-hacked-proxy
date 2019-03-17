@@ -34,4 +34,6 @@ the domains match e.g. you are connecting directly via IP address.
 .tp <x> <y> <z>      Teleport (relative with ~)
 .wall                Glitch through walls in the head direction
 .nofall              Enable or disable no fall damage
+.novelocity          Drop player velocity packets
+.bright              Enable night vision
 ```
