@@ -244,7 +244,7 @@ createServer(async socket => {
 
                     const writer = new PacketWriter(ids.editBook)
                         .writeBool(true)
-                        .writeVarInt(692)
+                        .writeVarInt(757)
                         .writeUInt8(1)
 
                     writer.write(nbt.encode("", { pages }))
@@ -299,7 +299,7 @@ function getPacketIdsForProtocol(v) {
     return {
         joinGame: v < 389 ? v < 345 ? 0x23 : 0x24 : 0x25,
         teleportConfirm: 0x0,
-        editBook: v < 389 ? null : 0xb,
+        editBook: v < 469 ? v < 389 ? null : 0xb : 0xc,
         chatMessageS: v < 465 ? 0x2 : 0x3,
         chatMessageC: v < 343 ? 0xf : 0xe,
         playerAbilitiesC: v < 451 ? v < 345 ? 0x2c : 0x2e : 0x2f,
@@ -309,7 +309,7 @@ function getPacketIdsForProtocol(v) {
         playerPosS: v < 465 ? v < 343 ? 0xc : 0x10 : 0x12,
         playerPosLookS: v < 465 ? v < 343 ? 0xd : 0x11 : 0x13,
         entityVelocity: v < 451 ? v < 345 ? 0x3e : 0x41 : 0x42,
-        entityEffect: v < 451 ? v < 389 ? 0x51 : 0x53 : 0x55,
-        removeEntityEffect: v < 451 ? v < 389 ? 0x34 : 0x36 : 0x37
+        entityEffect: v < 451 ? v < 389 ? 0x51 : 0x53 : 0x54,
+        removeEntityEffect: v < 389 ? 0x34 : 0x36
     }
 }
