@@ -291,7 +291,7 @@ createServer(async socket => {
             conn.send(packet)
         }
 
-        sendChat({ text: "Connected via hacked proxy.\nType .help for a list of commands.", color: "gray" })
+        sendChat({ text: "Connected via hacked proxy. Credits: Janis Pritzkau \nType .help for a list of commands.", color: "gray" })
     }).catch(console.log)
 }).listen(parseInt(opts.port) || 25565, "127.0.0.1")
 
