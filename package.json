@@ -1,28 +1,16 @@
 {
   "name": "mc-hack-proxy",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.1.0",
+  "private": true,
   "main": ".",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+ssh://git@gitlab.com/janispritzkau/mc-hack-proxy.git"
-  },
   "author": "Janis Pritzkau",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://gitlab.com/janispritzkau/mc-hack-proxy/issues"
-  },
-  "homepage": "https://gitlab.com/janispritzkau/mc-hack-proxy#readme",
   "dependencies": {
-    "mcproto": "^0.5.4",
+    "mcproto": "^0.7.2",
     "minecraft-folder-path": "^1.1.0",
-    "nbt-ts": "^0.1.1"
+    "nbt-ts": "^1.0.2"
   },
   "devDependencies": {
-    "@types/node": "^11.11.3",
-    "typescript": "^3.3.3333"
+    "@types/node": "^11.13.19",
+    "typescript": "^3.5.3"
   }
 }

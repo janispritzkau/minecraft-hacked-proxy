@@ -1,5 +1,4 @@
-const { Connection, PacketWriter, State } = require("mcproto")
-const { createServer } = require("net")
+const { Server, Client, PacketWriter, State } = require("mcproto")
 const nbt = require("nbt-ts")
 const path = require("path")
 const fs = require("fs")
@@ -43,15 +42,14 @@ function extractHost(host) {
 
 const commands = ["speed", "fly", "tp", "wall", "nofall", "novelocity", "bright"]
 
-createServer(async socket => {
-    const client = new Connection(socket, { isServer: true, keepAlive: false })
-    client.onError = console.log
+new Server({ keepAlive: false }, async client => {
+    client.on("error", console.error)
 
     const handshake = await client.nextPacket()
     handshake.readVarInt()
     let host = extractHost(handshake.readString().split("\0")[0]), port
     if (!host) {
-        if (!defaultHost) return client.disconnect()
+        if (!defaultHost) return client.end()
         host = defaultHost
         port = defaultPort
     }
@@ -63,14 +61,14 @@ createServer(async socket => {
     }
     client.pause()
 
-    Connection.connect(host, port, profile && {
+    Client.connect(host, port, profile && {
         accessToken: profile.accessToken,
         profile: profile.id,
         keepAlive: false
     }).then(async conn => {
-        conn.onError = console.log
-        client.onClose = () => conn.disconnect()
-        conn.onClose = () => client.disconnect()
+        conn.on("error", console.error)
+        client.on("end", () => conn.end())
+        conn.on("end", () => client.end())
 
         conn.send(new PacketWriter(0x0).writeVarInt(client.protocol)
             .writeString(host).writeUInt16(conn.socket.remotePort)
@@ -79,10 +77,10 @@ createServer(async socket => {
         client.resume()
         if (client.state == State.Login) {
             conn.send(new PacketWriter(0x0).writeString(username))
-            client.send(await conn.nextPacketWithId(0x2))
+            client.send(await conn.nextPacket(0x2, false))
         } else {
-            conn.onPacket = packet => client.send(packet)
-            client.onPacket = packet => conn.send(packet)
+            conn.on("packet", packet => client.send(packet))
+            client.on("packet", packet => conn.send(packet))
             return
         }
 
@@ -98,7 +96,7 @@ createServer(async socket => {
         let invulnerable = false, creativeMode = false
         let noFall = false, noVelocity = false, bright = false
 
-        conn.onPacket = packet => {
+        conn.on("packet", packet => {
             if (client.state != State.Play) return client.send(packet)
             if (packet.id == ids.joinGame) {
                 eid = packet.readInt32()
@@ -123,7 +121,7 @@ createServer(async socket => {
             }
             client.send(packet)
             if (packet.id == ids.playerAbilitiesC || packet.id == ids.entityProperties) updateAbilitiesSpeed()
-        }
+        })
 
         function updateAbilitiesSpeed() {
             client.send(new PacketWriter(ids.entityProperties)
@@ -136,7 +134,7 @@ createServer(async socket => {
             if (flyingEnabled) flags += 4
             if (creativeMode) flags += 8
             client.send(new PacketWriter(ids.playerAbilitiesC)
-                .writeUInt8(flags).writeFloat(.1 * speed).writeFloat(0))
+                .writeUInt8(flags).writeFloat(.05 * speed).writeFloat(0.1))
         }
 
         function runCommand(command, args) {
@@ -261,7 +259,7 @@ createServer(async socket => {
             }
         }
 
-        client.onPacket = packet => {
+        client.on("packet", packet => {
             if (client.state != State.Play) return conn.send(packet)
 
             if (packet.id == ids.chatMessageS) {
@@ -289,27 +287,27 @@ createServer(async socket => {
                 if (teleportIds.delete(packet.readVarInt())) return
             }
             conn.send(packet)
-        }
+        })
 
         sendChat({ text: "Connected via hacked proxy. Credits: Janis Pritzkau \nType .help for a list of commands.", color: "gray" })
-    }).catch(console.log)
+    }).catch(console.error)
 }).listen(parseInt(opts.port) || 25565, "127.0.0.1")
 
 function getPacketIdsForProtocol(v) {
     return {
-        joinGame: v < 389 ? v < 345 ? 0x23 : 0x24 : 0x25,
+        joinGame: 0x25,
         teleportConfirm: 0x0,
-        editBook: v < 469 ? v < 389 ? null : 0xb : 0xc,
-        chatMessageS: v < 465 ? 0x2 : 0x3,
-        chatMessageC: v < 343 ? 0xf : 0xe,
-        playerAbilitiesC: v < 451 ? v < 345 ? 0x2c : 0x2e : 0x2f,
-        playerAbilitiesS: v < 465 ? v < 343 ? 0x13 : 0x17 : 0x19,
-        entityProperties: v < 465 ? v < 389 ? 0x51 : 0x52 : 0x53,
-        playerPosLookC: v < 451 ? v < 345 ? 0x2f : 0x32 : 0x33,
-        playerPosS: v < 465 ? v < 343 ? 0xc : 0x10 : 0x12,
-        playerPosLookS: v < 465 ? v < 343 ? 0xd : 0x11 : 0x13,
-        entityVelocity: v < 451 ? v < 345 ? 0x3e : 0x41 : 0x42,
-        entityEffect: v < 451 ? v < 389 ? 0x51 : 0x53 : 0x54,
-        removeEntityEffect: v < 389 ? 0x34 : 0x36
+        editBook: 0xc,
+        chatMessageS: 0x3,
+        chatMessageC: 0xe,
+        playerAbilitiesC: 0x31,
+        playerAbilitiesS: 0x19,
+        entityProperties: 0x58,
+        playerPosLookC: 0x35,
+        playerPosS: 0x11,
+        playerPosLookS: 0x12,
+        entityVelocity: 0x45,
+        entityEffect: 0x59,
+        removeEntityEffect: 0x38
     }
 }
