@@ -1,4 +1,4 @@
-# Fly and speed hack proxy for Minecraft 1.12 - 19w11b
+# Fly and speed hack proxy for Minecraft 1.14.4
 
 ## Usage
 
