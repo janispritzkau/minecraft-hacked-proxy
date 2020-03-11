@@ -118,6 +118,10 @@ new Server({ keepAlive: false }, async client => {
             } else if (packet.id == ids.entityVelocity && noVelocity) {
                 // drop player velocity packets
                 if (packet.readVarInt() == eid) return
+            } else if (packet.id == 0x05) {
+                packet.readVarInt()
+                packet.read(16)
+                sendChat(`player at ${packet.readDouble()} ${packet.readDouble()} ${packet.readDouble()}`)
             }
             client.send(packet)
             if (packet.id == ids.playerAbilitiesC || packet.id == ids.entityProperties) updateAbilitiesSpeed()
@@ -295,19 +299,19 @@ new Server({ keepAlive: false }, async client => {
 
 function getPacketIdsForProtocol(v) {
     return {
-        joinGame: 0x25,
+        joinGame: 0x26,
         teleportConfirm: 0x0,
         editBook: 0xc,
         chatMessageS: 0x3,
-        chatMessageC: 0xe,
-        playerAbilitiesC: 0x31,
+        chatMessageC: 0xf,
+        playerAbilitiesC: 0x32,
         playerAbilitiesS: 0x19,
-        entityProperties: 0x58,
-        playerPosLookC: 0x35,
+        entityProperties: 0x59,
+        playerPosLookC: 0x36,
         playerPosS: 0x11,
         playerPosLookS: 0x12,
-        entityVelocity: 0x45,
-        entityEffect: 0x59,
-        removeEntityEffect: 0x38
+        entityVelocity: 0x46,
+        entityEffect: 0x5a,
+        removeEntityEffect: 0x39
     }
 }
